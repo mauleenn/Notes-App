@@ -1,0 +1,57 @@
+@inject IJSRuntime JSRuntime
+@inject INoteRepository NoteRepository
+
+<button class="btn btn-primary" @onclick="AddNote">
+    <span class="oi oi-plus"></span>
+    New Note
+</button>
+
+<div class="row">
+    @foreach (var note in Notes)
+    {
+        <NoteListItem Note="note" OnAddNewNote="SaveNote" onDeleteNote="DeleteNote"/>
+        
+    }
+</div>
+
+@code{
+    
+    private bool isEditing;
+    public IList<NoteModel> Notes { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Notes = NoteRepository.GetAll().ToList();
+    }
+
+    private void AddNote()
+    {
+        if(!isEditing)
+        {
+            Notes.Insert(0, new NoteModel() {ReadOnly = false});
+            isEditing = false;
+        }
+    }
+
+    private void SaveNote(NoteModel noteModel)
+    {
+        noteModel.ReadOnly = true;
+        NoteRepository.Save(noteModel);
+        isEditing = false;
+    }
+
+    private async void DeleteNote(NoteModel noteModel)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm","$The note {noteModel.Title} is going to be deleted, are you sure?"))
+            return;
+        try
+        {
+            NoteRepository.Delete(noteModel);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+}
